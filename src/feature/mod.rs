@@ -2,5 +2,4 @@
 
 /// 메모 도메인 모듈입니다.
 pub mod memo;
-
 pub use memo::domain::*;

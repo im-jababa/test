@@ -3,6 +3,7 @@ use std::sync::atomic::AtomicU64;
 use chrono::{DateTime, Utc};
 use super::id::ID;
 use super::sort_option::SortOption;
+
 /// 새 메모 생성 시 사용할 다음 ID를 추적하는 정적 카운터입니다.
 static NEXT_ID: AtomicU64 = AtomicU64::new(Memo::INITIAL_NEXT_ID);
 
