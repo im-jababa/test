@@ -16,10 +16,17 @@ pub enum SortOption {
 
 impl Default for SortOption {
     /// 기본 정렬 기준을 반환합니다.
-    ///
-    /// 현재 구현은 미완성으로 `todo!()` 상태입니다.
-    ///
     fn default() -> Self {
-        todo!()
+        Self::UpdatedAtDesc
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SortOption;
+
+    #[test]
+    fn default_is_updated_at_desc() {
+        assert_eq!(SortOption::default(), SortOption::UpdatedAtDesc);
     }
 }
