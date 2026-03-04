@@ -65,7 +65,111 @@ impl Memo {
     /// 현재 구현은 미완성으로 `todo!()` 상태입니다.
     ///
     pub fn compare(&self, other: &Self, sort_option: SortOption) -> Ordering {
-        let _ = (other, sort_option);
-        todo!()
+        match sort_option {
+            SortOption::CreatedAtAsc => self
+                .created_at
+                .cmp(&other.created_at)
+                .then_with(|| self.updated_at.cmp(&other.updated_at))
+                .then_with(|| self.id.cmp(&other.id)),
+            SortOption::CreatedAtDesc => self
+                .created_at
+                .cmp(&other.created_at)
+                .reverse()
+                .then_with(|| self.updated_at.cmp(&other.updated_at).reverse())
+                .then_with(|| self.id.cmp(&other.id)),
+            SortOption::UpdatedAtAsc => self
+                .updated_at
+                .cmp(&other.updated_at)
+                .then_with(|| self.created_at.cmp(&other.created_at))
+                .then_with(|| self.id.cmp(&other.id)),
+            SortOption::UpdatedAtDesc => self
+                .updated_at
+                .cmp(&other.updated_at)
+                .reverse()
+                .then_with(|| self.created_at.cmp(&other.created_at).reverse())
+                .then_with(|| self.id.cmp(&other.id)),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn memo(id: ID, created_at_sec: i64, updated_at_sec: i64) -> Memo {
+        Memo {
+            id,
+            title: format!("memo-{id}"),
+            content: String::from("content"),
+            created_at: DateTime::from_timestamp(created_at_sec, 0).expect("valid timestamp"),
+            updated_at: DateTime::from_timestamp(updated_at_sec, 0).expect("valid timestamp"),
+        }
+    }
+
+    #[test]
+    fn compare_created_at_asc_orders_by_created_at() {
+        let left = memo(1, 10, 100);
+        let right = memo(2, 20, 0);
+
+        assert_eq!(left.compare(&right, SortOption::CreatedAtAsc), Ordering::Less);
+        assert_eq!(right.compare(&left, SortOption::CreatedAtAsc), Ordering::Greater);
+    }
+
+    #[test]
+    fn compare_created_at_desc_orders_by_created_at() {
+        let left = memo(1, 10, 0);
+        let right = memo(2, 20, 100);
+
+        assert_eq!(left.compare(&right, SortOption::CreatedAtDesc), Ordering::Greater);
+        assert_eq!(right.compare(&left, SortOption::CreatedAtDesc), Ordering::Less);
+    }
+
+    #[test]
+    fn compare_updated_at_asc_orders_by_updated_at() {
+        let left = memo(1, 100, 10);
+        let right = memo(2, 0, 20);
+
+        assert_eq!(left.compare(&right, SortOption::UpdatedAtAsc), Ordering::Less);
+        assert_eq!(right.compare(&left, SortOption::UpdatedAtAsc), Ordering::Greater);
+    }
+
+    #[test]
+    fn compare_updated_at_desc_orders_by_updated_at() {
+        let left = memo(1, 0, 10);
+        let right = memo(2, 100, 20);
+
+        assert_eq!(left.compare(&right, SortOption::UpdatedAtDesc), Ordering::Greater);
+        assert_eq!(right.compare(&left, SortOption::UpdatedAtDesc), Ordering::Less);
+    }
+
+    #[test]
+    fn compare_updated_at_desc_uses_created_at_desc_as_tiebreaker() {
+        let newer_created = memo(1, 20, 100);
+        let older_created = memo(2, 10, 100);
+
+        assert_eq!(
+            newer_created.compare(&older_created, SortOption::UpdatedAtDesc),
+            Ordering::Less
+        );
+        assert_eq!(
+            older_created.compare(&newer_created, SortOption::UpdatedAtDesc),
+            Ordering::Greater
+        );
+    }
+
+    #[test]
+    fn compare_uses_id_asc_when_timestamps_are_equal() {
+        let lower_id = memo(1, 10, 20);
+        let higher_id = memo(2, 10, 20);
+
+        for sort_option in [
+            SortOption::CreatedAtAsc,
+            SortOption::CreatedAtDesc,
+            SortOption::UpdatedAtAsc,
+            SortOption::UpdatedAtDesc,
+        ] {
+            assert_eq!(lower_id.compare(&higher_id, sort_option), Ordering::Less);
+            assert_eq!(higher_id.compare(&lower_id, sort_option), Ordering::Greater);
+        }
     }
 }
