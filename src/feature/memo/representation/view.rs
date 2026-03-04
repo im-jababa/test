@@ -1,10 +1,18 @@
 //! 메모 앱 뷰를 구성합니다.
 
-use iced::widget::{button, column, container, pick_list, row, scrollable, text, text_input};
+use iced::widget::{
+    button, column, container, opaque, pick_list, row, scrollable, stack, text, text_input,
+};
 use iced::{Element, Length};
 
 use super::message::UiMessage;
 use super::state::AppState;
+
+const TITLE_INPUT_ID: &str = "memo-title-input";
+
+pub fn title_input_id() -> text_input::Id {
+    text_input::Id::new(TITLE_INPUT_ID)
+}
 
 pub fn root(state: &AppState) -> Element<'_, UiMessage> {
     let left = container(left_panel(state))
@@ -14,11 +22,20 @@ pub fn root(state: &AppState) -> Element<'_, UiMessage> {
         .width(Length::FillPortion(3))
         .height(Length::Fill);
 
-    container(row![left, right].spacing(16))
+    let base: Element<'_, UiMessage> = container(row![left, right].spacing(16))
         .padding(16)
         .width(Length::Fill)
         .height(Length::Fill)
-        .into()
+        .into();
+
+    if let Some(id) = state.pending_delete_id {
+        return stack([base, confirm_delete_dialog(state, id)])
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into();
+    }
+
+    base
 }
 
 fn left_panel(state: &AppState) -> iced::widget::Column<'_, UiMessage> {
@@ -35,11 +52,11 @@ fn left_panel(state: &AppState) -> iced::widget::Column<'_, UiMessage> {
 
     let mut items = column![].spacing(8);
     if state.memos.is_empty() {
-        items = items.push(text("메모가 없습니다."));
+        items = items.push(text("No memos yet."));
     } else {
         for memo in &state.memos {
             let title = if memo.title.trim().is_empty() {
-                "(제목 없음)".to_string()
+                "(Untitled)".to_string()
             } else {
                 memo.title.clone()
             };
@@ -67,7 +84,7 @@ fn left_panel(state: &AppState) -> iced::widget::Column<'_, UiMessage> {
 
 fn right_panel(state: &AppState) -> iced::widget::Column<'_, UiMessage> {
     let Some(selected_id) = state.selected_id else {
-        return column![text("메모를 선택하세요")].height(Length::Fill);
+        return column![text("Select a memo")].height(Length::Fill);
     };
 
     column![
@@ -77,6 +94,7 @@ fn right_panel(state: &AppState) -> iced::widget::Column<'_, UiMessage> {
         ]
         .spacing(8),
         text_input("Title", &state.detail.title_input)
+            .id(title_input_id())
             .on_input(UiMessage::TitleChanged)
             .padding(8),
         text_input("Content", &state.detail.content_input)
@@ -85,4 +103,43 @@ fn right_panel(state: &AppState) -> iced::widget::Column<'_, UiMessage> {
     ]
     .spacing(12)
     .height(Length::Fill)
+}
+
+fn confirm_delete_dialog(state: &AppState, id: u64) -> Element<'_, UiMessage> {
+    let target_title = state
+        .memos
+        .iter()
+        .find(|memo| memo.id == id)
+        .map(|memo| {
+            if memo.title.trim().is_empty() {
+                "(Untitled)".to_string()
+            } else {
+                memo.title.clone()
+            }
+        })
+        .unwrap_or_else(|| format!("Memo #{id}"));
+
+    let dialog = container(
+        column![
+            text("Delete this memo?"),
+            text(format!("Target: {target_title}")),
+            row![
+                button("Cancel").on_press(UiMessage::DeleteCanceled),
+                button("Delete").on_press(UiMessage::DeleteConfirmed)
+            ]
+            .spacing(8)
+        ]
+        .spacing(12),
+    )
+    .padding(16)
+    .width(Length::Fixed(320.0))
+    .style(iced::widget::container::rounded_box);
+
+    opaque(
+        container(dialog)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .center_x(Length::Fill)
+            .center_y(Length::Fill),
+    )
 }

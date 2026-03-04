@@ -1,5 +1,6 @@
 //! iced application 오케스트레이션입니다.
 
+use iced::widget::text_input;
 use iced::{Size, Task, Theme, application};
 
 use super::bus;
@@ -20,8 +21,15 @@ fn theme(_state: &AppState) -> Theme {
 }
 
 fn update(state: &mut AppState, message: UiMessage) -> Task<UiMessage> {
+    let focus_new_memo_title = matches!(message, UiMessage::AddClicked);
+
     for event in bus::ui_to_bus_events(message) {
         bus::apply_event(state, event);
     }
+
+    if focus_new_memo_title {
+        return text_input::focus(view::title_input_id());
+    }
+
     Task::none()
 }

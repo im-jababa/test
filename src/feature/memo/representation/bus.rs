@@ -8,7 +8,9 @@ pub fn ui_to_bus_events(message: UiMessage) -> Vec<BusEvent> {
     match message {
         UiMessage::AddClicked => vec![BusEvent::CreateMemo],
         UiMessage::MemoSelected(id) => vec![BusEvent::SelectMemo(id)],
-        UiMessage::DeleteClicked(id) => vec![BusEvent::DeleteMemo(id)],
+        UiMessage::DeleteClicked(id) => vec![BusEvent::RequestDelete(id)],
+        UiMessage::DeleteConfirmed => vec![BusEvent::ConfirmDelete],
+        UiMessage::DeleteCanceled => vec![BusEvent::CancelDelete],
         UiMessage::TitleChanged(title) => vec![BusEvent::UpdateTitle(title)],
         UiMessage::ContentChanged(content) => vec![BusEvent::UpdateContent(content)],
         UiMessage::SortChanged(sort) => vec![BusEvent::ChangeSort(sort)],
@@ -29,26 +31,39 @@ pub fn apply_event(state: &mut AppState, event: BusEvent) {
                 updated_at_order: order,
             });
             state.selected_id = Some(id);
+            state.pending_delete_id = None;
             state.sort_memos();
             state.sync_detail_from_selection();
         }
         BusEvent::SelectMemo(id) => {
             if state.memos.iter().any(|memo| memo.id == id) {
                 state.selected_id = Some(id);
+                state.pending_delete_id = None;
                 state.sync_detail_from_selection();
             } else {
                 state.selected_id = None;
+                state.pending_delete_id = None;
                 state.clear_detail();
             }
         }
-        BusEvent::DeleteMemo(id) => {
+        BusEvent::RequestDelete(id) => {
+            state.pending_delete_id = state.memos.iter().any(|memo| memo.id == id).then_some(id);
+        }
+        BusEvent::ConfirmDelete => {
+            let Some(id) = state.pending_delete_id else {
+                return;
+            };
             let before = state.memos.len();
             state.memos.retain(|memo| memo.id != id);
             let removed = state.memos.len() != before;
+            state.pending_delete_id = None;
             if removed && state.selected_id == Some(id) {
                 state.selected_id = None;
                 state.clear_detail();
             }
+        }
+        BusEvent::CancelDelete => {
+            state.pending_delete_id = None;
         }
         BusEvent::UpdateTitle(title) => {
             let Some(id) = state.selected_memo_id() else {
@@ -106,6 +121,7 @@ mod tests {
                 },
             ],
             selected_id: None,
+            pending_delete_id: None,
             detail: Default::default(),
             sort: UiSortOption::UpdatedAtDesc,
             next_id: 3,
@@ -147,9 +163,54 @@ mod tests {
         let mut state = seed_state();
 
         apply_event(&mut state, BusEvent::ChangeSort(UiSortOption::CreatedAtAsc));
-        assert_eq!(state.memos.iter().map(|memo| memo.id).collect::<Vec<_>>(), vec![1, 2]);
+        assert_eq!(
+            state.memos.iter().map(|memo| memo.id).collect::<Vec<_>>(),
+            vec![1, 2]
+        );
 
-        apply_event(&mut state, BusEvent::ChangeSort(UiSortOption::CreatedAtDesc));
-        assert_eq!(state.memos.iter().map(|memo| memo.id).collect::<Vec<_>>(), vec![2, 1]);
+        apply_event(
+            &mut state,
+            BusEvent::ChangeSort(UiSortOption::CreatedAtDesc),
+        );
+        assert_eq!(
+            state.memos.iter().map(|memo| memo.id).collect::<Vec<_>>(),
+            vec![2, 1]
+        );
+    }
+
+    #[test]
+    fn reducer_delete_requires_confirmation() {
+        let mut state = seed_state();
+        state.selected_id = Some(1);
+        state.sync_detail_from_selection();
+
+        apply_event(&mut state, BusEvent::RequestDelete(1));
+        assert_eq!(state.pending_delete_id, Some(1));
+        assert_eq!(state.memos.len(), 2);
+
+        apply_event(&mut state, BusEvent::ConfirmDelete);
+        assert_eq!(state.pending_delete_id, None);
+        assert_eq!(
+            state.memos.iter().map(|memo| memo.id).collect::<Vec<_>>(),
+            vec![2]
+        );
+        assert_eq!(state.selected_id, None);
+        assert_eq!(state.detail.title_input, "");
+        assert_eq!(state.detail.content_input, "");
+    }
+
+    #[test]
+    fn reducer_cancel_delete_keeps_memos() {
+        let mut state = seed_state();
+
+        apply_event(&mut state, BusEvent::RequestDelete(2));
+        assert_eq!(state.pending_delete_id, Some(2));
+
+        apply_event(&mut state, BusEvent::CancelDelete);
+        assert_eq!(state.pending_delete_id, None);
+        assert_eq!(
+            state.memos.iter().map(|memo| memo.id).collect::<Vec<_>>(),
+            vec![1, 2]
+        );
     }
 }

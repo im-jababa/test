@@ -63,9 +63,6 @@ impl Memo {
     }
 
     /// 현재 정렬 기준을 받아 다른 메모와의 정렬 순서를 비교합니다.
-    ///
-    /// 현재 구현은 미완성으로 `todo!()` 상태입니다.
-    ///
     pub fn compare(&self, other: &Self, sort_option: SortOption) -> Ordering {
         match sort_option {
             SortOption::CreatedAtAsc => self
@@ -113,8 +110,14 @@ mod tests {
         let left = memo(1, 10, 100);
         let right = memo(2, 20, 0);
 
-        assert_eq!(left.compare(&right, SortOption::CreatedAtAsc), Ordering::Less);
-        assert_eq!(right.compare(&left, SortOption::CreatedAtAsc), Ordering::Greater);
+        assert_eq!(
+            left.compare(&right, SortOption::CreatedAtAsc),
+            Ordering::Less
+        );
+        assert_eq!(
+            right.compare(&left, SortOption::CreatedAtAsc),
+            Ordering::Greater
+        );
     }
 
     #[test]
@@ -122,8 +125,14 @@ mod tests {
         let left = memo(1, 10, 0);
         let right = memo(2, 20, 100);
 
-        assert_eq!(left.compare(&right, SortOption::CreatedAtDesc), Ordering::Greater);
-        assert_eq!(right.compare(&left, SortOption::CreatedAtDesc), Ordering::Less);
+        assert_eq!(
+            left.compare(&right, SortOption::CreatedAtDesc),
+            Ordering::Greater
+        );
+        assert_eq!(
+            right.compare(&left, SortOption::CreatedAtDesc),
+            Ordering::Less
+        );
     }
 
     #[test]
@@ -131,8 +140,14 @@ mod tests {
         let left = memo(1, 100, 10);
         let right = memo(2, 0, 20);
 
-        assert_eq!(left.compare(&right, SortOption::UpdatedAtAsc), Ordering::Less);
-        assert_eq!(right.compare(&left, SortOption::UpdatedAtAsc), Ordering::Greater);
+        assert_eq!(
+            left.compare(&right, SortOption::UpdatedAtAsc),
+            Ordering::Less
+        );
+        assert_eq!(
+            right.compare(&left, SortOption::UpdatedAtAsc),
+            Ordering::Greater
+        );
     }
 
     #[test]
@@ -140,8 +155,14 @@ mod tests {
         let left = memo(1, 0, 10);
         let right = memo(2, 100, 20);
 
-        assert_eq!(left.compare(&right, SortOption::UpdatedAtDesc), Ordering::Greater);
-        assert_eq!(right.compare(&left, SortOption::UpdatedAtDesc), Ordering::Less);
+        assert_eq!(
+            left.compare(&right, SortOption::UpdatedAtDesc),
+            Ordering::Greater
+        );
+        assert_eq!(
+            right.compare(&left, SortOption::UpdatedAtDesc),
+            Ordering::Less
+        );
     }
 
     #[test]
@@ -174,11 +195,6 @@ mod tests {
             assert_eq!(higher_id.compare(&lower_id, sort_option), Ordering::Greater);
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::Memo;
 
     #[test]
     fn new_sets_id_and_initial_timestamps() {

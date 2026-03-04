@@ -24,6 +24,7 @@ pub struct DetailVm {
 pub struct AppState {
     pub memos: Vec<MemoItemVm>,
     pub selected_id: Option<u64>,
+    pub pending_delete_id: Option<u64>,
     pub detail: DetailVm,
     pub sort: UiSortOption,
     pub next_id: u64,
@@ -35,6 +36,7 @@ impl Default for AppState {
         Self {
             memos: Vec::new(),
             selected_id: None,
+            pending_delete_id: None,
             detail: DetailVm::default(),
             sort: UiSortOption::default(),
             next_id: 1,
